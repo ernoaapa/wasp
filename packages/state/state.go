@@ -29,8 +29,7 @@ type virtualStateAccess struct {
 	db              kvstore.KVStore
 	empty           bool
 	kvs             *buffered.BufferedKVStoreAccess
-	committedHash   hashing.HashValue
-	uncommittedHash hashing.HashValue
+	stateCommitment hashing.HashValue
 }
 
 // newVirtualState creates VirtualStateAccess interface with the partition of KVStore
@@ -74,8 +73,7 @@ func (vs *virtualStateAccess) Copy() VirtualStateAccess {
 	ret := &virtualStateAccess{
 		chainID:         vs.chainID.Clone(),
 		db:              vs.db,
-		committedHash:   vs.committedHash,
-		uncommittedHash: vs.uncommittedHash,
+		stateCommitment: vs.stateCommitment,
 		empty:           vs.empty,
 		kvs:             vs.kvs.Copy(),
 	}
@@ -83,11 +81,10 @@ func (vs *virtualStateAccess) Copy() VirtualStateAccess {
 }
 
 func (vs *virtualStateAccess) DangerouslyConvertToString() string {
-	return fmt.Sprintf("#%d, ts: %v, committed hash: %s, uncommitted hash: %s\n%s",
+	return fmt.Sprintf("#%d, ts: %v, state commitment: %s\n%s",
 		vs.BlockIndex(),
 		vs.Timestamp(),
-		vs.committedHash.String(),
-		vs.uncommittedHash.String(),
+		vs.stateCommitment.String(),
 		vs.KVStore().DangerouslyDumpToString(),
 	)
 }
@@ -152,7 +149,7 @@ func (vs *virtualStateAccess) ApplyStateUpdates(stateUpd ...StateUpdate) {
 			vs.kvs.Mutations().Del(k)
 		}
 		updHash := hashing.HashData(upd.Bytes())
-		vs.committedHash = hashing.HashData(vs.committedHash[:], updHash[:])
+		vs.stateCommitment = hashing.HashData(vs.stateCommitment[:], updHash[:])
 	}
 }
 
@@ -170,7 +167,7 @@ func (vs *virtualStateAccess) ExtractBlock() (Block, error) {
 
 // StateCommitment returns the hash of the state, calculated as a recursive hashing of the previous state hash and the block.
 func (vs *virtualStateAccess) StateCommitment() hashing.HashValue {
-	return vs.committedHash
+	return vs.stateCommitment
 }
 
 // endregion ////////////////////////////////////////////////////////////
