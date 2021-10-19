@@ -151,6 +151,8 @@ func (vs *virtualStateAccess) ApplyStateUpdates(stateUpd ...StateUpdate) {
 		for k := range upd.Mutations().Dels {
 			vs.kvs.Mutations().Del(k)
 		}
+		updHash := hashing.HashData(upd.Bytes())
+		vs.committedHash = hashing.HashData(vs.committedHash[:], updHash[:])
 	}
 }
 
@@ -168,19 +170,7 @@ func (vs *virtualStateAccess) ExtractBlock() (Block, error) {
 
 // StateCommitment returns the hash of the state, calculated as a recursive hashing of the previous state hash and the block.
 func (vs *virtualStateAccess) StateCommitment() hashing.HashValue {
-	if vs.kvs.Mutations().IsEmpty() {
-		return vs.committedHash
-	}
-	if vs.kvs.Mutations().IsModified() {
-		block, err := vs.ExtractBlock()
-		if err != nil {
-			panic(xerrors.Errorf("StateCommitment: %v", err))
-		}
-		vs.uncommittedHash = hashing.HashData(block.Bytes())
-		vs.kvs.Mutations().ResetModified()
-	}
-	ret := hashing.HashData(vs.committedHash[:], vs.uncommittedHash[:])
-	return ret
+	return vs.committedHash
 }
 
 // endregion ////////////////////////////////////////////////////////////

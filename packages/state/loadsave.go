@@ -20,8 +20,7 @@ func (vs *virtualStateAccess) Commit(blocks ...Block) error {
 	}
 	batch := vs.db.Batched()
 
-	stateCommitment := vs.StateCommitment()
-	if err := batch.Set(dbkeys.MakeKey(dbkeys.ObjectTypeStateHash), stateCommitment.Bytes()); err != nil {
+	if err := batch.Set(dbkeys.MakeKey(dbkeys.ObjectTypeStateHash), vs.StateCommitment().Bytes()); err != nil {
 		return err
 	}
 
@@ -50,7 +49,6 @@ func (vs *virtualStateAccess) Commit(blocks ...Block) error {
 
 	vs.kvs.ClearMutations()
 	vs.kvs.Mutations().ResetModified()
-	vs.committedHash = stateCommitment
 	return nil
 }
 
