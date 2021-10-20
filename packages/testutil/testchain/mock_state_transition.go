@@ -48,19 +48,15 @@ func (c *MockedStateTransition) NextState(vs state.VirtualStateAccess, chainOutp
 	counter, err := codec.DecodeUint64(counterBin, 0)
 	require.NoError(c.t, err)
 
-	suBlockIndex := state.NewStateUpdateWithBlocklogValues(prevBlockIndex+1, time.Time{}, vs.StateCommitment())
-
-	suCounter := state.NewStateUpdate()
+	stateUpdate := state.NewStateUpdateWithBlocklogValues(prevBlockIndex+1, time.Time{}, vs.StateCommitment())
 	counterBin = codec.EncodeUint64(counter + 1)
-	suCounter.Mutations().Set(counterKey, counterBin)
-
-	suReqs := state.NewStateUpdate()
+	stateUpdate.Mutations().Set(counterKey, counterBin)
 	for i, req := range reqs {
 		key := kv.Key(blocklog.NewRequestLookupKey(vs.BlockIndex()+1, uint16(i)).Bytes())
-		suReqs.Mutations().Set(key, req.ID().Bytes())
+		stateUpdate.Mutations().Set(key, req.ID().Bytes())
 	}
 
-	nextvs.ApplyStateUpdates(suBlockIndex, suCounter, suReqs)
+	nextvs.ApplyStateUpdates(stateUpdate)
 	require.EqualValues(c.t, prevBlockIndex+1, nextvs.BlockIndex())
 
 	nextStateHash := nextvs.StateCommitment()
